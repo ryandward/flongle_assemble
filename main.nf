@@ -11,10 +11,11 @@ if ( !params.ref_fasta ) {
 }
 
 workflow {
-    // Create channel from reads glob pattern
-    reads_ch = Channel.fromPath(params.reads, checkIfExists: true)
+    // Step 0: Check requirements
+    CHECK_REQUIREMENTS()
     
-    // Create channel for reference FASTA
+    // Create channels
+    reads_ch = Channel.fromPath(params.reads, checkIfExists: true)
     ref_ch = Channel.fromPath(params.ref_fasta, checkIfExists: true)
     
     // Step 1: Prepare all reads
@@ -37,6 +38,55 @@ workflow {
 }
 
 // ========= PROCESSES =========
+
+// Step 0: Check that all required tools are available
+process CHECK_REQUIREMENTS {
+    output:
+    stdout
+    
+    script:
+    """
+    echo "Checking required tools..."
+    
+    # Required tools
+    REQUIRED_TOOLS=("minimap2" "racon" "miniasm" "samtools")
+    MISSING_TOOLS=()
+    
+    for tool in "\${REQUIRED_TOOLS[@]}"; do
+        if ! command -v \$tool &> /dev/null; then
+            MISSING_TOOLS+=(\$tool)
+        else
+            echo "✓ \$tool found: \$(which \$tool)"
+        fi
+    done
+    
+    # Check alignment tools
+    echo "Checking alignment tools..."
+    if command -v minimap2 &> /dev/null; then
+        echo "✓ minimap2 found (preferred for ONT)"
+    elif command -v bowtie2 &> /dev/null; then
+        echo "⚠ minimap2 not found, will use bowtie2 (slower for long reads)"
+        echo "  Consider installing minimap2: mamba install -c bioconda minimap2"
+    else
+        MISSING_TOOLS+=("minimap2 or bowtie2")
+    fi
+    
+    # Report results
+    if [ \${#MISSING_TOOLS[@]} -eq 0 ]; then
+        echo "✓ All required tools are available!"
+        echo "Environment ready for assembly pipeline."
+    else
+        echo "✗ Missing tools: \${MISSING_TOOLS[*]}"
+        echo ""
+        echo "To install missing tools:"
+        echo "  mamba install -c bioconda \${MISSING_TOOLS[*]}"
+        echo ""
+        echo "Or activate an environment with these tools:"
+        echo "  mamba activate your_ont_environment"
+        exit 1
+    fi
+    """
+}
 
 // Step 1: Concatenate reads
 process PREPARE_READS {
