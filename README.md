@@ -1,6 +1,3 @@
-Here's your updated README with the Requirements section added:
-
-```markdown
 # Flongle Assemble
 ONT assembly pipeline with conservative polishing to prevent systematic sequence errors.
 
@@ -21,6 +18,3 @@ mamba activate flye
 ```bash
 nextflow run ryandward/flongle_assemble --fastq ./ --ref_fasta reference.fa
 ```
-```
-
-I also fixed the username in the usage command from "your-username" to "ryandward" to match your actual repo.
